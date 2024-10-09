@@ -1,100 +1,30 @@
 pipeline {
     agent any
     stages {
-        stage('Checkout the Code from GitHub') {
+        stage('Checkout Code') {
             steps {
-                git url: 'https://github.com/vinod-reddy-1998/bank_proj/', branch: "master"
-                echo 'Checked out the code from GitHub'
+                git url: 'https://github.com/your-repo.git', branch: 'master'
             }
         }
-        stage('Compile the Code') {
+        stage('Build') {
             steps {
-                echo 'Starting compilation'
-                sh 'mvn compile'
-            }
-        }
-        stage('Run Unit Tests') {
-            steps {
-                echo 'Running unit tests'
-                sh 'mvn test'
-            }
-        }
-        stage('QA Checks') {
-            steps {
-                echo 'Running QA checks'
-                sh 'mvn checkstyle:checkstyle'
-            }
-        }
-        stage('Package the Application') {
-            steps {
-                echo 'Packaging the application'
-                sh 'mvn package'
-            }
-        }
-        stage('Build Docker Image') {
-            steps {
-                echo 'Building Docker image'
-                sh 'docker build -t myimg .'
-            }
-        }
-        stage('Run Docker Container') {
-            steps {
-                echo 'Running Docker container'
-                sh 'docker run -d -p 8091:8091 --name c000 myimg'
-            }
-        }
-        stage('Provision Test Server') {
-            steps {
-                echo 'Provisioning test server with Terraform'
-                sh 'terraform init'
-                sh 'terraform apply -auto-approve'
-            }
-        }
-        stage('Configure Test Server with Ansible') {
-            steps {
-                echo 'Configuring test server with Ansible'
-                sh 'ansible-playbook -i inventory/test_server.ini playbook.yml'
+                sh 'mvn clean compile package'
             }
         }
         stage('Deploy to Test Server') {
             steps {
-                echo 'Deploying application to test server'
-                sh 'ssh user@test_server "docker pull myimg && docker run -d -p 8091:8091 myimg"'
+                sh 'ansible-playbook -i ~/ansible/inventory/test_server.ini ~/ansible/playbook.yml --private-key /path/to/your/key.pem'
             }
         }
-        stage('Run Automated Tests on Test Server') {
+        stage('Run Tests') {
             steps {
-                echo 'Running automated tests on test server'
-                sh 'pytest tests/'
+                sh 'mvn test'
             }
         }
-        stage('Deploy to Production') {
+        stage('Deploy to Prod Server') {
             steps {
-                script {
-                    def buildSuccessful = true // Assume tests passed
-                    if (buildSuccessful) {
-                        echo 'Deploying to production server'
-                        sh 'ansible-playbook -i inventory/prod_server.ini playbook.yml'
-                    } else {
-                        error 'Build failed, skipping production deployment'
-                    }
-                }
+                sh 'ansible-playbook -i ~/ansible/inventory/prod_server.ini ~/ansible/playbook.yml --private-key /path/to/your/key.pem'
             }
-        }
-        stage('Configure Monitoring with Prometheus and Grafana') {
-            steps {
-                echo 'Setting up monitoring tools'
-                sh 'ansible-playbook -i inventory/monitoring.ini monitoring_playbook.yml'
-            }
-        }
-    }
-    post {
-        always {
-            echo 'Cleaning up...'
-            sh 'docker stop c000 || true'
-            sh 'docker rm c000 || true'
-            // Optionally destroy the test server
-            sh 'terraform destroy -auto-approve'
         }
     }
 }
