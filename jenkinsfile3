@@ -1,0 +1,150 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Checkout Code from GitHub') {
+            steps {
+                git url: 'https://github.com/vinod-reddy-1998/bank_proj/', branch: 'master'
+                echo 'Checked out code from GitHub'
+            }
+        }
+        
+        stage('Compile Code') {
+            steps {
+                echo 'Starting compilation...'
+                sh 'mvn compile'
+            }
+        }
+        
+        stage('Run Unit Tests') {
+            steps {
+                echo 'Running unit tests...'
+                sh 'mvn test'
+            }
+        }
+        
+        stage('Quality Analysis') {
+            steps {
+                echo 'Running Checkstyle for code quality...'
+                sh 'mvn checkstyle:checkstyle'
+            }
+        }
+        
+        stage('Package Application') {
+            steps {
+                echo 'Packaging the application...'
+                sh 'mvn package'
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                sh 'docker build -t myimg .'
+            }
+        }
+        
+        stage('Provision Test Server with Terraform') {
+            steps {
+                echo 'Provisioning test server...'
+                dir('terraform/test') {
+                    sh '''
+                        terraform init
+                        terraform apply -auto-approve
+                    '''
+                }
+            }
+        }
+        
+        stage('Configure Test Server with Ansible') {
+            steps {
+                echo 'Configuring test server...'
+                sh '''
+                    ansible-playbook -i terraform/test/inventory ansible/playbooks/test-server.yml
+                '''
+            }
+        }
+        
+        stage('Deploy Application to Test Server') {
+            steps {
+                echo 'Deploying application to test server...'
+                sh '''
+                    ssh user@test-server "docker run -d -p 8091:8091 --name c000 myimg"
+                '''
+            }
+        }
+        
+        stage('Run Deployment Tests') {
+            steps {
+                echo 'Running deployment tests...'
+                sh './run-tests.sh'
+            }
+        }
+        
+        stage('Provision Production Server with Terraform') {
+            steps {
+                echo 'Provisioning production server...'
+                dir('terraform/prod') {
+                    sh '''
+                        terraform init
+                        terraform apply -auto-approve
+                    '''
+                }
+            }
+        }
+        
+        stage('Configure Production Server with Ansible') {
+            steps {
+                echo 'Configuring production server...'
+                sh '''
+                    ansible-playbook -i terraform/prod/inventory ansible/playbooks/prod-server.yml
+                '''
+            }
+        }
+        
+        stage('Deploy Application to Production Server') {
+            steps {
+                echo 'Deploying application to production server...'
+                sh '''
+                    ssh user@prod-server "docker run -d -p 8091:8091 --name c000 myimg"
+                '''
+            }
+        }
+        
+        stage('Setup Monitoring') {
+            steps {
+                echo 'Setting up monitoring with Prometheus and Grafana...'
+                // Ensure Prometheus and Grafana YAML configurations are in place
+                sh '''
+                    # Run Prometheus
+                    docker run -d -p 9090:9090 -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+                    # Run Grafana
+                    docker run -d -p 3000:3000 grafana/grafana
+                '''
+            }
+        }
+        
+        stage('Configure Grafana Dashboard') {
+            steps {
+                echo 'Configuring Grafana dashboard...'
+                sh '''
+                    curl -X POST -H "Content-Type: application/json" -d @dashboard-config.json http://admin:admin@localhost:3000/api/dashboards/db
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Cleaning up...'
+            sh 'docker rm -f c000 || true' // Cleanup test container
+            // Add any other cleanup tasks if necessary
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
