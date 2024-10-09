@@ -13,7 +13,7 @@ pipeline {
         }
         stage('Deploy to Test Server') {
             steps {
-                sh 'ansible-playbook -i ~/ansible/inventory/test_server.ini ~/ansible/playbook.yml --private-key /path/to/your/key.pem'
+                sh 'ansible-playbook -i ~/ansible/inventory/test_server.ini ~/ansible/playbook.yml --private-key key.pem'
             }
         }
         stage('Run Tests') {
@@ -23,7 +23,7 @@ pipeline {
         }
         stage('Deploy to Prod Server') {
             steps {
-                sh 'ansible-playbook -i ~/ansible/inventory/prod_server.ini ~/ansible/playbook.yml --private-key /path/to/your/key.pem'
+                sh 'ansible-playbook -i ~/ansible/inventory/prod_server.ini ~/ansible/playbook.yml --private-key key.pem'
             }
         }
     }
