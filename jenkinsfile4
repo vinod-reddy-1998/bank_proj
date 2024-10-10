@@ -1,0 +1,159 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Checkout the Code from GitHub') {
+            steps {
+                script {
+                    // Clone the GitHub repository
+                    git url: 'https://github.com/vinod-reddy-1998/Banking-java-project/'
+                    echo 'Checked out code from GitHub'
+                }
+            }
+        }
+
+        stage('Compile the Code') {
+            steps {
+                script {
+                    // Compile the Java project using Maven
+                    echo 'Starting compilation'
+                    sh 'mvn compile'
+                }
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                script {
+                    // Run the unit tests using Maven
+                    echo 'Running unit tests'
+                    sh 'mvn test'
+                }
+            }
+        }
+
+        stage('Code Quality Check') {
+            steps {
+                script {
+                    // Check the code style and quality
+                    echo 'Checking code quality'
+                    sh 'mvn checkstyle:checkstyle'
+                }
+            }
+        }
+
+        stage('Package the Application') {
+            steps {
+                script {
+                    // Package the application into a JAR file
+                    echo 'Packaging the application'
+                    sh 'mvn package'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build Docker image from Dockerfile
+                    echo 'Building Docker image'
+                    sh 'docker build -t myimg .'
+                }
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                script {
+                    // Run the Docker container and expose the necessary port
+                    echo 'Running Docker container'
+                    sh 'docker run -dt -p 8091:8091 --name c000 myimg'
+                }
+            }
+        }
+
+        stage('Provision Test Server with Terraform') {
+            steps {
+                script {
+                    // Initialize Terraform and apply the configuration to provision the test server
+                    echo 'Provisioning test server with Terraform'
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Configure Test Server with Ansible') {
+            steps {
+                script {
+                    // Run Ansible playbook to configure the test server
+                    echo 'Configuring test server with Ansible'
+                    sh 'ansible-playbook -i inventory test_server_setup.yml'
+                }
+            }
+        }
+
+        stage('Deploy Application to Test Server') {
+            steps {
+                script {
+                    // Deploy the application to the test server
+                    echo 'Deploying application to test server'
+                    sh 'scp target/myapp.jar user@test-server:/path/to/deploy/'
+                    sh 'ssh user@test-server "java -jar /path/to/deploy/myapp.jar &"'
+                }
+            }
+        }
+
+        stage('Run Smoke Tests') {
+            steps {
+                script {
+                    // Execute smoke tests on the test server
+                    echo 'Running smoke tests'
+                    sh 'curl http://test-server:8091/health'
+                }
+            }
+        }
+
+        stage('Deploy to Production') {
+            steps {
+                script {
+                    // Check if smoke tests passed before proceeding to production
+                    echo 'Deploying to production server'
+                    sh 'scp target/myapp.jar user@prod-server:/path/to/deploy/'
+                    sh 'ssh user@prod-server "java -jar /path/to/deploy/myapp.jar &"'
+                }
+            }
+        }
+
+        stage('Configure Monitoring') {
+            steps {
+                script {
+                    // Configure Prometheus and Grafana for monitoring
+                    echo 'Configuring Prometheus and Grafana'
+                    sh 'kubectl apply -f prometheus-config.yml'
+                    sh 'kubectl apply -f grafana-config.yml'
+                }
+            }
+        }
+
+        stage('Monitor Application') {
+            steps {
+                script {
+                    // Check if monitoring is set up correctly
+                    echo 'Monitoring application'
+                    sh 'curl http://grafana-server:3000'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up resources'
+            sh 'docker stop c000'
+            sh 'docker rm c000'
+            // Optionally, destroy the test server after use
+            sh 'terraform destroy -auto-approve'
+        }
+    }
+}
