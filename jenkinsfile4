@@ -1,11 +1,5 @@
 pipeline {
     agent any
-
-    environment {
-        TF_VAR_aws_access_key = credentials('aws-access-key') // Jenkins credentials ID for AWS Access Key
-        TF_VAR_aws_secret_key = credentials('aws-secret-key') // Jenkins credentials ID for AWS Secret Key
-    }
-
     stages {
         stage('Checkout Code from GitHub') {
             steps {
@@ -88,8 +82,8 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying application to test server'
-                    sh "scp target/myapp.jar user@${env.TEST_SERVER_IP}:/path/to/deploy/"
-                    sh "ssh user@${env.TEST_SERVER_IP} 'java -jar /path/to/deploy/myapp.jar &'"
+                    sh "scp target/myapp.jar ubuntu@${env.TEST_SERVER_IP}:./"
+                    sh "ssh ubuntu@${env.TEST_SERVER_IP} 'java -jar ./myapp.jar &'"
                 }
             }
         }
@@ -107,8 +101,8 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying application to production server'
-                    sh "scp target/myapp.jar user@${env.PROD_SERVER_IP}:/path/to/deploy/"
-                    sh "ssh user@${env.PROD_SERVER_IP} 'java -jar /path/to/deploy/myapp.jar &'"
+                    sh "scp target/myapp.jar ubuntu@${env.PROD_SERVER_IP}:./"
+                    sh "ssh ubuntu@${env.PROD_SERVER_IP} 'java -jar ./myapp.jar &'"
                 }
             }
         }
