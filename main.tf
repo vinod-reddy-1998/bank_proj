@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_instance" "test_server" {
-  ami           = "ami-0c55b159cbfafe01e"  # Replace with your desired AMI
+  ami           = "ami-0e86e20dae9224db8"  # Replace with your desired AMI
   instance_type = "t2.micro"
 
   tags = {
@@ -12,7 +12,7 @@ resource "aws_instance" "test_server" {
 }
 
 resource "aws_instance" "prod_server" {
-  ami           = "ami-0c55b159cbfafe01e"  # Same or different AMI for production
+  ami           = "ami-0e86e20dae9224db8"  # Same or different AMI for production
   instance_type = "t2.micro"
 
   tags = {
