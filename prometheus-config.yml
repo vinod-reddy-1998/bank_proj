@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'application'
+    static_configs:
+      - targets: ['{{ test_server_ip }}:8091']  # Use the actual IP address in the deployment phase
