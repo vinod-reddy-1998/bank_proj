@@ -1,21 +1,24 @@
 pipeline {
     agent any
-    
+
+    environment {
+        TF_VAR_aws_access_key = credentials('aws-access-key') // Jenkins credentials ID for AWS Access Key
+        TF_VAR_aws_secret_key = credentials('aws-secret-key') // Jenkins credentials ID for AWS Secret Key
+    }
+
     stages {
-        stage('Checkout the Code from GitHub') {
+        stage('Checkout Code from GitHub') {
             steps {
                 script {
-                    // Clone the GitHub repository
                     git url: 'https://github.com/vinod-reddy-1998/Banking-java-project/'
                     echo 'Checked out code from GitHub'
                 }
             }
         }
 
-        stage('Compile the Code') {
+        stage('Compile Code') {
             steps {
                 script {
-                    // Compile the Java project using Maven
                     echo 'Starting compilation'
                     sh 'mvn compile'
                 }
@@ -25,7 +28,6 @@ pipeline {
         stage('Run Unit Tests') {
             steps {
                 script {
-                    // Run the unit tests using Maven
                     echo 'Running unit tests'
                     sh 'mvn test'
                 }
@@ -35,60 +37,49 @@ pipeline {
         stage('Code Quality Check') {
             steps {
                 script {
-                    // Check the code style and quality
                     echo 'Checking code quality'
                     sh 'mvn checkstyle:checkstyle'
                 }
             }
         }
 
-        stage('Package the Application') {
+        stage('Package Application') {
             steps {
                 script {
-                    // Package the application into a JAR file
                     echo 'Packaging the application'
                     sh 'mvn package'
                 }
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Provision Servers with Terraform') {
             steps {
                 script {
-                    // Build Docker image from Dockerfile
-                    echo 'Building Docker image'
-                    sh 'docker build -t myimg .'
-                }
-            }
-        }
-
-        stage('Run Docker Container') {
-            steps {
-                script {
-                    // Run the Docker container and expose the necessary port
-                    echo 'Running Docker container'
-                    sh 'docker run -dt -p 8091:8091 --name c000 myimg'
-                }
-            }
-        }
-
-        stage('Provision Test Server with Terraform') {
-            steps {
-                script {
-                    // Initialize Terraform and apply the configuration to provision the test server
-                    echo 'Provisioning test server with Terraform'
+                    echo 'Provisioning servers with Terraform'
                     sh 'terraform init'
                     sh 'terraform apply -auto-approve'
                 }
             }
         }
 
-        stage('Configure Test Server with Ansible') {
+        stage('Get Server IPs') {
             steps {
                 script {
-                    // Run Ansible playbook to configure the test server
-                    echo 'Configuring test server with Ansible'
-                    sh 'ansible-playbook -i inventory test_server_setup.yml'
+                    env.TEST_SERVER_IP = sh(script: 'terraform output -raw test_server_ip', returnStdout: true).trim()
+                    env.PROD_SERVER_IP = sh(script: 'terraform output -raw prod_server_ip', returnStdout: true).trim()
+                    echo "Test Server IP: ${env.TEST_SERVER_IP}"
+                    echo "Production Server IP: ${env.PROD_SERVER_IP}"
+                }
+            }
+        }
+
+        stage('Configure Servers with Ansible') {
+            steps {
+                script {
+                    echo "Configuring test server at IP: ${env.TEST_SERVER_IP}"
+                    sh "ansible-playbook -i '${env.TEST_SERVER_IP},' test_server_setup.yml"
+                    echo "Configuring production server at IP: ${env.PROD_SERVER_IP}"
+                    sh "ansible-playbook -i '${env.PROD_SERVER_IP},' test_server_setup.yml"
                 }
             }
         }
@@ -96,10 +87,9 @@ pipeline {
         stage('Deploy Application to Test Server') {
             steps {
                 script {
-                    // Deploy the application to the test server
                     echo 'Deploying application to test server'
-                    sh 'scp target/myapp.jar user@test-server:/path/to/deploy/'
-                    sh 'ssh user@test-server "java -jar /path/to/deploy/myapp.jar &"'
+                    sh "scp target/myapp.jar user@${env.TEST_SERVER_IP}:/path/to/deploy/"
+                    sh "ssh user@${env.TEST_SERVER_IP} 'java -jar /path/to/deploy/myapp.jar &'"
                 }
             }
         }
@@ -107,20 +97,18 @@ pipeline {
         stage('Run Smoke Tests') {
             steps {
                 script {
-                    // Execute smoke tests on the test server
                     echo 'Running smoke tests'
-                    sh 'curl http://test-server:8091/health'
+                    sh "curl http://${env.TEST_SERVER_IP}:8091/health"
                 }
             }
         }
 
-        stage('Deploy to Production') {
+        stage('Deploy Application to Production') {
             steps {
                 script {
-                    // Check if smoke tests passed before proceeding to production
-                    echo 'Deploying to production server'
-                    sh 'scp target/myapp.jar user@prod-server:/path/to/deploy/'
-                    sh 'ssh user@prod-server "java -jar /path/to/deploy/myapp.jar &"'
+                    echo 'Deploying application to production server'
+                    sh "scp target/myapp.jar user@${env.PROD_SERVER_IP}:/path/to/deploy/"
+                    sh "ssh user@${env.PROD_SERVER_IP} 'java -jar /path/to/deploy/myapp.jar &'"
                 }
             }
         }
@@ -128,20 +116,9 @@ pipeline {
         stage('Configure Monitoring') {
             steps {
                 script {
-                    // Configure Prometheus and Grafana for monitoring
                     echo 'Configuring Prometheus and Grafana'
-                    sh 'kubectl apply -f prometheus-config.yml'
-                    sh 'kubectl apply -f grafana-config.yml'
-                }
-            }
-        }
-
-        stage('Monitor Application') {
-            steps {
-                script {
-                    // Check if monitoring is set up correctly
-                    echo 'Monitoring application'
-                    sh 'curl http://grafana-server:3000'
+                    sh "kubectl apply -f prometheus-config.yml"
+                    sh "kubectl apply -f grafana-config.yml"
                 }
             }
         }
@@ -149,11 +126,10 @@ pipeline {
 
     post {
         always {
-            echo 'Cleaning up resources'
-            sh 'docker stop c000'
-            sh 'docker rm c000'
-            // Optionally, destroy the test server after use
-            sh 'terraform destroy -auto-approve'
+            script {
+                echo 'Cleaning up resources'
+                sh 'terraform destroy -auto-approve'
+            }
         }
     }
 }
