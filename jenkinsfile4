@@ -1,11 +1,5 @@
 pipeline {
     agent any
-    
-    environment {
-        // Define environment variables for your SSH key and user
-        SSH_KEY = credentials('ssh-key-id') // Replace 'ssh-key-id' with your Jenkins credential ID
-        USER = 'ubuntu' // Adjust this to your actual username if different
-    }
 
     stages {
         stage('Checkout Code from GitHub') {
