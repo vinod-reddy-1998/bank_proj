@@ -1,6 +1,12 @@
 pipeline {
     agent any
     
+    environment {
+        // Define environment variables for your SSH key and user
+        SSH_KEY = credentials('ssh-key-id') // Replace 'ssh-key-id' with your Jenkins credential ID
+        USER = 'ubuntu' // Adjust this to your actual username if different
+    }
+
     stages {
         stage('Checkout Code from GitHub') {
             steps {
@@ -72,9 +78,9 @@ pipeline {
             steps {
                 script {
                     echo "Configuring test server at IP: ${env.TEST_SERVER_IP}"
-                    sh "ansible-playbook -i '${env.TEST_SERVER_IP},' test_server_setup.yml"
+                    sh "ansible-playbook -i '${env.TEST_SERVER_IP},' test_server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER}"
                     echo "Configuring production server at IP: ${env.PROD_SERVER_IP}"
-                    sh "ansible-playbook -i '${env.PROD_SERVER_IP},' prod_server_setup.yml"
+                    sh "ansible-playbook -i '${env.PROD_SERVER_IP},' prod_server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER}"
                 }
             }
         }
@@ -83,8 +89,8 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying application to test server'
-                    sh "scp target/myapp.jar ubuntu@${env.TEST_SERVER_IP}:./"
-                    sh "ssh ubuntu@${env.TEST_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
+                    sh "scp -i ${WORKSPACE}/key.pem target/myapp.jar ${USER}@${env.TEST_SERVER_IP}:./"
+                    sh "ssh -i ${WORKSPACE}/key.pem ${USER}@${env.TEST_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
                 }
             }
         }
@@ -102,8 +108,8 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying application to production server'
-                    sh "scp target/myapp.jar ubuntu@${env.PROD_SERVER_IP}:./"
-                    sh "ssh ubuntu@${env.PROD_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
+                    sh "scp -i ${WORKSPACE}/key.pem target/myapp.jar ${USER}@${env.PROD_SERVER_IP}:./"
+                    sh "ssh -i ${WORKSPACE}/key.pem ${USER}@${env.PROD_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
                 }
             }
         }
