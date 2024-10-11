@@ -7,6 +7,9 @@ resource "aws_instance" "test_server" {
   instance_type = "t2.micro"
   key_name      = "key"  # Replace with the actual key pair name in AWS
 
+  # Associate with existing security group
+  vpc_security_group_ids = ["sg-0604e268389a6d96c"]
+
   tags = {
     Name = "TestServer"
   }
@@ -16,6 +19,9 @@ resource "aws_instance" "prod_server" {
   ami           = "ami-0e86e20dae9224db8"  # Same or different AMI for production
   instance_type = "t2.micro"
   key_name      = "key"  # Replace with the actual key pair name in AWS
+
+  # Associate with existing security group
+  vpc_security_group_ids = ["sg-0604e268389a6d96c"]
 
   tags = {
     Name = "ProdServer"
