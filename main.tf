@@ -5,6 +5,7 @@ provider "aws" {
 resource "aws_instance" "test_server" {
   ami           = "ami-0e86e20dae9224db8"  # Replace with your desired AMI
   instance_type = "t2.micro"
+  key_name      = "key"  # Replace with the actual key pair name in AWS
 
   tags = {
     Name = "TestServer"
@@ -14,6 +15,7 @@ resource "aws_instance" "test_server" {
 resource "aws_instance" "prod_server" {
   ami           = "ami-0e86e20dae9224db8"  # Same or different AMI for production
   instance_type = "t2.micro"
+  key_name      = "key"  # Replace with the actual key pair name in AWS
 
   tags = {
     Name = "ProdServer"
