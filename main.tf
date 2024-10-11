@@ -6,13 +6,13 @@ provider "aws" {
 resource "aws_security_group" "allow_ssh" {
   name        = "allow_ssh"
   description = "Allow SSH inbound traffic"
-  vpc_id      = "vpc-xxxxxx"  # Replace with your VPC ID if necessary
+  vpc_id      = "vpc-0a01953ca2da8cf59"  # Replace with your VPC ID if necessary
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["YOUR_JENKINS_IP/32"]  # Replace with your Jenkins IP
+    cidr_blocks = ["http://44.202.9.57:8080/32"]  # Replace with your Jenkins IP
   }
 
   egress {
