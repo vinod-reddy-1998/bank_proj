@@ -1,5 +1,8 @@
 pipeline {
     agent any
+  environment {
+        USER = 'ubuntu' // Adjust this to your actual username if different
+    }
 
     stages {
         stage('Checkout Code from GitHub') {
