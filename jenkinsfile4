@@ -49,7 +49,6 @@ pipeline {
                 }
             }
         }
-
         stage('Provision Servers with Terraform') {
             steps {
                 script {
@@ -90,6 +89,11 @@ pipeline {
         stage('Deploy Application to Test Server') {
             steps {
                 script {
+                    sh 'chmod 400 /var/lib/jenkins/workspace/finance/key.pem'
+                    sh "ls -l \"${WORKSPACE}\""
+                    sleep(60)
+                    echo "target file listing"
+                     sh 'ls -l target/'
                     echo 'Deploying application to test server'
                     sh "scp -i ${WORKSPACE}/key.pem target/myapp.jar ${USER}@${env.TEST_SERVER_IP}:./"
                     sh "ssh -i ${WORKSPACE}/key.pem ${USER}@${env.TEST_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
