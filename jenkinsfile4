@@ -74,6 +74,8 @@ pipeline {
         stage('Configure Servers with Ansible') {
             steps {
                 script {
+                        // Ensure the key.pem file has the correct permissions
+                    sh 'chmod 400 /var/lib/jenkins/workspace/finance/key.pem'
                     echo "Configuring test server at IP: ${env.TEST_SERVER_IP}"
                     sh "ansible-playbook -i '${env.TEST_SERVER_IP},' test_server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER}"
                     echo "Configuring production server at IP: ${env.PROD_SERVER_IP}"
