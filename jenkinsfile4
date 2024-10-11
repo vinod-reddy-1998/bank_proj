@@ -5,7 +5,7 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Code from GitHub') {
+        stage('Checkout Code from GitHub') { 
             steps {
                 script {
                     git url: 'https://github.com/vinod-reddy-1998/bank_proj/', branch: 'master'
@@ -75,8 +75,6 @@ pipeline {
                 script {
                         // Ensure the key.pem file has the correct permissions
                     sh 'chmod 400 /var/lib/jenkins/workspace/finance/key.pem'
-                    sh "ls -l \"${WORKSPACE}\""
-                    sleep(60)
                     echo "Configuring test server at IP: ${env.TEST_SERVER_IP}"
                     sh "ansible-playbook -i '${env.TEST_SERVER_IP},' test_server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER} -e 'ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"'"
         
