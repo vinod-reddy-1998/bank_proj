@@ -74,7 +74,7 @@ pipeline {
                     echo "Configuring test server at IP: ${env.TEST_SERVER_IP}"
                     sh "ansible-playbook -i '${env.TEST_SERVER_IP},' test_server_setup.yml"
                     echo "Configuring production server at IP: ${env.PROD_SERVER_IP}"
-                    sh "ansible-playbook -i '${env.PROD_SERVER_IP},' test_server_setup.yml"
+                    sh "ansible-playbook -i '${env.PROD_SERVER_IP},' prod_server_setup.yml"
                 }
             }
         }
@@ -84,36 +84,51 @@ pipeline {
                 script {
                     echo 'Deploying application to test server'
                     sh "scp target/myapp.jar ubuntu@${env.TEST_SERVER_IP}:./"
-                    sh "ssh ubuntu@${env.TEST_SERVER_IP} 'java -jar ./myapp.jar &'"
+                    sh "ssh ubuntu@${env.TEST_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
                 }
             }
         }
 
-        stage('Run Smoke Tests') {
+        stage('Run Smoke Tests on Test Server') {
             steps {
                 script {
-                    echo 'Running smoke tests'
+                    echo 'Running smoke tests on the test server'
                     sh "curl http://${env.TEST_SERVER_IP}:8091/health"
                 }
             }
         }
 
-        stage('Deploy Application to Production') {
+        stage('Deploy Application to Production Server') {
             steps {
                 script {
                     echo 'Deploying application to production server'
                     sh "scp target/myapp.jar ubuntu@${env.PROD_SERVER_IP}:./"
-                    sh "ssh ubuntu@${env.PROD_SERVER_IP} 'java -jar ./myapp.jar &'"
+                    sh "ssh ubuntu@${env.PROD_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
                 }
             }
         }
 
-        stage('Configure Monitoring') {
+        stage('Configure Monitoring with Prometheus and Grafana') {
             steps {
                 script {
-                    echo 'Configuring Prometheus and Grafana'
-                    sh "kubectl apply -f prometheus-config.yml"
-                    sh "kubectl apply -f grafana-config.yml"
+                    echo 'Updating Prometheus configuration with test and production server IPs'
+                    sh """
+                    sed -i 's/{{ test_server_ip }}/${env.TEST_SERVER_IP}/g' monitoring/prometheus.yml
+                    sed -i 's/{{ prod_server_ip }}/${env.PROD_SERVER_IP}/g' monitoring/prometheus.yml
+                    """
+                    echo 'Deploying Prometheus and Grafana using Docker Compose'
+                    dir('monitoring') {
+                        sh 'docker-compose up -d'
+                    }
+                }
+            }
+        }
+        
+        stage('Reload Prometheus Config') {
+            steps {
+                script {
+                    echo 'Reloading Prometheus configuration'
+                    sh "curl -X POST http://localhost:9090/-/reload"
                 }
             }
         }
