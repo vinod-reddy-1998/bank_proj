@@ -12,7 +12,7 @@ resource "aws_security_group" "allow_ssh" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["http://44.202.9.57:8080/32"]  # Replace with your Jenkins IP
+    cidr_blocks = ["http://44.202.9.57/32"]  # Replace with your Jenkins IP
   }
 
   egress {
