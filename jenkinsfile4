@@ -95,8 +95,8 @@ pipeline {
                     echo "target file listing"
                      sh 'ls -l target/'
                     echo 'Deploying application to test server'
-                    sh "scp -i ${WORKSPACE}/key.pem target/myapp.jar ${USER}@${env.TEST_SERVER_IP}:./"
-                    sh "ssh -i ${WORKSPACE}/key.pem ${USER}@${env.TEST_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
+                    sh "scp -i ${WORKSPACE}/key.pem target/banking-0.0.1-SNAPSHOT.jar ${USER}@${env.TEST_SERVER_IP}:./"
+                    sh "ssh -i ${WORKSPACE}/key.pem ${USER}@${env.TEST_SERVER_IP} 'nohup java -jar ./banking-0.0.1-SNAPSHOT.jar &'"
                 }
             }
         }
@@ -114,8 +114,8 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying application to production server'
-                    sh "scp -i ${WORKSPACE}/key.pem target/myapp.jar ${USER}@${env.PROD_SERVER_IP}:./"
-                    sh "ssh -i ${WORKSPACE}/key.pem ${USER}@${env.PROD_SERVER_IP} 'nohup java -jar ./myapp.jar &'"
+                    sh "scp -i ${WORKSPACE}/key.pem target/banking-0.0.1-SNAPSHOT.jar ${USER}@${env.PROD_SERVER_IP}:./"
+                    sh "ssh -i ${WORKSPACE}/key.pem ${USER}@${env.PROD_SERVER_IP} 'nohup java -jar ./banking-0.0.1-SNAPSHOT.jar &'"
                 }
             }
         }
