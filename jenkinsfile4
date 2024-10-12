@@ -77,6 +77,7 @@ pipeline {
                     // Ensure the key.pem file has the correct permissions
                     sh 'chmod 400 /var/lib/jenkins/workspace/finance/key.pem'
                     echo "Configuring test server at IP: ${env.TEST_SERVER_IP}"
+                    sleep(60)
                     sh "ansible-playbook -i '${env.TEST_SERVER_IP},' test_server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER} -e 'ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"'"
                     echo "Configuring production server at IP: ${env.PROD_SERVER_IP}"
                     sh "ansible-playbook -i '${env.PROD_SERVER_IP},' prod_server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER} -e 'ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"'"
@@ -88,7 +89,6 @@ pipeline {
             steps {
                 script {
                     sh 'chmod 400 "${WORKSPACE}/key.pem"'
-                    sleep(60)
                     echo "Deploying application to test server"
                     sh """
                         scp -i "${WORKSPACE}/key.pem" target/banking-0.0.1-SNAPSHOT.jar \
