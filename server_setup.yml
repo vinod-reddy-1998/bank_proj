@@ -1,0 +1,72 @@
+---
+- name: Configure the server
+  hosts: all
+  become: yes  # Run tasks with sudo
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    - name: Install common utilities
+      apt:
+        name:
+          - curl
+          - git
+          - unzip
+        state: present
+
+    - name: Create application directory
+      file:
+        path: /opt/banking_app
+        state: directory
+
+    - name: Copy the application JAR file
+      copy:
+        src: /path/to/banking-0.0.1-SNAPSHOT.jar  # Adjust this path
+        dest: /opt/banking_app/banking.jar
+
+    - name: Create a systemd service for the application
+      copy:
+        dest: /etc/systemd/system/banking.service
+        content: |
+          [Unit]
+          Description=Banking Application
+
+          [Service]
+          User=ubuntu
+          ExecStart=/usr/bin/java -jar /opt/banking_app/banking.jar
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start the banking service
+      systemd:
+        name: banking
+        state: started
+        enabled: yes
+
+    - name: Ensure firewall is enabled and allows SSH
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Enable firewall
+      ufw:
+        state: enabled
+
+    - name: Allow access to application port (e.g., 8091)
+      ufw:
+        rule: allow
+        port: '8091'
+        proto: tcp
+
+    - name: Check service status
+      systemd:
+        name: banking
+        state: restarted
