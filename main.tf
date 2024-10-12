@@ -10,14 +10,14 @@ resource "random_id" "sg_suffix" {
 # Step 2: Define the security group
 resource "aws_security_group" "allow_ssh" {
   name        = "allow_ssh_${random_id.sg_suffix.hex}"  # Unique name
-  description = "Allow SSH inbound traffic"
+  description = "Allow all inbound traffic"
   vpc_id      = "vpc-0a01953ca2da8cf59"  # Replace with your VPC ID if necessary
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["35.175.144.191/32"]  # Replace with your Jenkins IP
+   ingress {
+    from_port   = 0      # Allow all ports
+    to_port     = 65535   # Allow all ports
+    protocol    = "tcp"   # TCP protocol
+    cidr_blocks = ["0.0.0.0/0"]  # Allow from all IPs
   }
 
   egress {
