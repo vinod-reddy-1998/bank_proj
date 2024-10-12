@@ -56,10 +56,11 @@ pipeline {
                 script {
                     // Ensure the key.pem file has the correct permissions
                     sh 'chmod 400 /var/lib/jenkins/workspace/finance/key.pem'
-                    echo "Configuring server at IP: ${SERVER_IP}"
-                    sleep(60) // Wait for any necessary time
-                    sh "ansible-playbook -i '${SERVER_IP},' server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER} -e 'ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"'"
-                }
+                    sh '''
+                        sudo apt-get update
+                        sudo apt-get install -y openjdk-11-jdk
+                    '''
+}
             }
         }
 
