@@ -1,0 +1,143 @@
+pipeline {
+    agent any
+    environment {
+        USER = 'ubuntu' // Adjust this to your actual username if different
+    }
+
+    stages {
+        stage('Checkout Code from GitHub') { 
+            steps {
+                script {
+                    git url: 'https://github.com/vinod-reddy-1998/bank_proj/', branch: 'master'
+                    echo 'Checked out code from GitHub'
+                }
+            }
+        }
+
+        stage('Compile Code') {
+            steps {
+                script {
+                    echo 'Starting compilation'
+                    sh 'mvn compile'
+                }
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                script {
+                    echo 'Running unit tests'
+                    sh 'mvn test'
+                }
+            }
+        }
+
+        stage('Code Quality Check') {
+            steps {
+                script {
+                    echo 'Checking code quality'
+                    sh 'mvn checkstyle:checkstyle'
+                }
+            }
+        }
+
+        stage('Package Application') {
+            steps {
+                script {
+                    echo 'Packaging the application'
+                    sh 'mvn package'
+                }
+            }
+        }
+
+        stage('Provision Server with Terraform') {
+            steps {
+                script {
+                    echo 'Provisioning server with Terraform'
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Get Server IP') {
+            steps {
+                script {
+                    env.SERVER_IP = sh(script: 'terraform output -raw server_ip', returnStdout: true).trim()
+                    echo "Server IP: ${env.SERVER_IP}"
+                }
+            }
+        }
+
+        stage('Configure Server with Ansible') {
+            steps {
+                script {
+                    // Ensure the key.pem file has the correct permissions
+                    sh 'chmod 400 /var/lib/jenkins/workspace/finance/key.pem'
+                    echo "Configuring server at IP: ${env.SERVER_IP}"
+                    sleep(60)
+                    sh "ansible-playbook -i '${env.SERVER_IP},' server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER} -e 'ansible_ssh_common_args=\"-o StrictHostKeyChecking=no\"'"
+                }
+            }
+        }
+
+        stage('Deploy Application to Server') {
+            steps {
+                script {
+                    sh 'chmod 400 "${WORKSPACE}/key.pem"'
+                    echo "Deploying application to server"
+                    sh """
+                        scp -i "${WORKSPACE}/key.pem" target/banking-0.0.1-SNAPSHOT.jar \
+                        ${USER}@${env.SERVER_IP}:./
+                    """
+                    sh """
+                        ssh -i "${WORKSPACE}/key.pem" ${USER}@${env.SERVER_IP} \
+                        'nohup java -jar ./banking-0.0.1-SNAPSHOT.jar &'
+                    """
+                }
+            }
+        }
+
+        stage('Run Smoke Tests on Server') {
+            steps {
+                script {
+                    echo 'Running smoke tests on the server'
+                    sh "curl http://${env.SERVER_IP}:8091/health"
+                }
+            }
+        }
+
+        stage('Configure Monitoring with Prometheus and Grafana') {
+            steps {
+                script {
+                    echo 'Updating Prometheus configuration with server IP'
+                    sh """
+                        sed -i 's/{{ server_ip }}/${env.SERVER_IP}/g' monitoring/prometheus.yml
+                    """
+                    echo 'Deploying Prometheus and Grafana using Docker Compose'
+                    dir('monitoring') {
+                        sh 'docker-compose up -d'
+                    }
+                }
+            }
+        }
+        
+        stage('Reload Prometheus Config') {
+            steps {
+                script {
+                    echo 'Reloading Prometheus configuration'
+                    sh "curl -X POST http://localhost:9090/-/reload"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo 'Cleaning up resources'
+                sh 'terraform destroy -auto-approve'
+            }
+        }
+    }
+}
