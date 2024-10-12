@@ -82,7 +82,7 @@ pipeline {
                     sh "ansible-playbook -i '${env.PROD_SERVER_IP},' prod_server_setup.yml --private-key ${WORKSPACE}/key.pem --user ${USER} -e \"ansible_ssh_common_args='-o StrictHostKeyChecking=no'\""                }
             }
         }
-
+    }
         stage('Deploy Application to Test Server') {
             steps {
                 script {
