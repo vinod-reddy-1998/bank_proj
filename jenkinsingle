@@ -69,12 +69,7 @@ pipeline {
                 script {
                     echo "Deploying application to server"
                     sh """
-                        scp -i "${WORKSPACE}/key.pem" target/banking-0.0.1-SNAPSHOT.jar \
-                        ${USER}@${SERVER_IP}:./
-                    """
-                    sh """
-                        ssh -i "${WORKSPACE}/key.pem" ${USER}@${SERVER_IP} \
-                        'nohup java -jar ./banking-0.0.1-SNAPSHOT.jar &'
+                     java -jar /var/lib/jenkins/workspace/finance/key.pem target/banking-0.0.1-SNAPSHOT.jar 
                     """
                 }
             }
